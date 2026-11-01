@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// qqmem —— qq-memory 的命令行入口。
+// qqmem —— qq-bridge-memory 的命令行入口。
 // 子命令：backfill / collect / search / recent / stats
 //
-// 约定：默认库 /root/qq-memory/data/messages.db，可用 --db 或 QQ_MEMORY_DB 覆盖。
+// 约定：默认库 /root/qq-bridge-memory/data/messages.db，可用 --db 或 QQ_MEMORY_DB 覆盖。
 
 import { openDb, search, recent, stats, getCursor } from '../src/db.mjs';
 import { backfillAll, listArchives, loadScopeMap } from '../src/backfill.mjs';
@@ -10,7 +10,7 @@ import { collectOnce } from '../src/collect.mjs';
 import { loadRelations } from '../src/relations.mjs';
 import { parseSince, parseUntil } from '../src/time.mjs';
 
-const DEFAULT_DB = process.env.QQ_MEMORY_DB || '/root/qq-memory/data/messages.db';
+const DEFAULT_DB = process.env.QQ_MEMORY_DB || '/root/qq-bridge-memory/data/messages.db';
 
 function parseArgs(argv) {
   const flags = {};

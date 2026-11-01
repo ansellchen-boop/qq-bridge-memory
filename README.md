@@ -2,7 +2,7 @@
 
 给 qq-bridge 的「大肥魚」补一层跨会话记忆：把群里和私聊里说过的原话存进本地 SQLite，让她能用 `qq_search_history` 翻回去。
 
-**外挂**：代码和数据全在 `/root/qq-memory`。`/root/qq-bridge` 里只碰三处接线（守卫白名单、preset 一条、cordis 一个块），全部由 `apply.py` 幂等维护，上游 merge 后跑一次就补回来。
+**外挂**：代码和数据全在 `/root/qq-bridge-memory`。`/root/qq-bridge` 里只碰三处接线（守卫白名单、preset 一条、cordis 一个块），全部由 `apply.py` 幂等维护，上游 merge 后跑一次就补回来。
 
 ## 为什么自己写
 
@@ -27,17 +27,17 @@ apply.py            四处接线的幂等补丁（默认修 / --check / --revert
 systemd/            1 分钟定时采集
 ```
 
-## 部署（远端 /root/qq-memory）
+## 部署（远端 /root/qq-bridge-memory）
 
-> 改名进行中：本仓库已改名 qq-bridge-memory，线上运行目录与 systemd 单元仍是旧名 `/root/qq-memory`，改名分两批，第二批随部署一起切。
+线上运行目录 `/root/qq-bridge-memory`（systemd 单元同名）。
 
 ```bash
 cd qq-bridge-memory
-rsync -az src bin tests package.json systemd apply.py qq:/root/qq-memory/
-ssh qq 'mkdir -p /root/qq-memory/data'
-ssh qq '/root/.nvm/versions/node/v24.21.0/bin/node /root/qq-memory/bin/qqmem.mjs backfill'
-ssh qq 'python3 /root/qq-memory/apply.py'          # 补三处接线（幂等）
-ssh qq 'python3 /root/qq-memory/apply.py --check'  # 全好 exit 0
+rsync -az src bin tests package.json systemd apply.py qq:/root/qq-bridge-memory/
+ssh qq 'mkdir -p /root/qq-bridge-memory/data'
+ssh qq '/root/.nvm/versions/node/v24.21.0/bin/node /root/qq-bridge-memory/bin/qqmem.mjs backfill'
+ssh qq 'python3 /root/qq-bridge-memory/apply.py'          # 补三处接线（幂等）
+ssh qq 'python3 /root/qq-bridge-memory/apply.py --check'  # 全好 exit 0
 ssh qq 'systemctl restart dsh-web'                 # 新代码/new preset 要重启才生效
 ```
 
@@ -46,8 +46,8 @@ ssh qq 'systemctl restart dsh-web'                 # 新代码/new preset 要重
 定时采集：
 
 ```bash
-scp systemd/qq-memory-collect.* qq:/etc/systemd/system/
-ssh qq 'systemctl daemon-reload && systemctl enable --now qq-memory-collect.timer'
+scp systemd/qq-bridge-memory-collect.* qq:/etc/systemd/system/
+ssh qq 'systemctl daemon-reload && systemctl enable --now qq-bridge-memory-collect.timer'
 ```
 
 ## CLI
@@ -61,7 +61,7 @@ node bin/qqmem.mjs backfill              # 全量重扫（去重，幂等）
 node bin/qqmem.mjs collect               # 增量一次
 ```
 
-库默认 `/root/qq-memory/data/messages.db`，可用 `--db` 或 `QQ_MEMORY_DB` 覆盖。
+库默认 `/root/qq-bridge-memory/data/messages.db`，可用 `--db` 或 `QQ_MEMORY_DB` 覆盖。
 
 ## 跨会话访问控制
 
@@ -86,8 +86,8 @@ node bin/qqmem.mjs collect               # 增量一次
 
 | 位置 | 改了什么 |
 |---|---|
-| `/root/.dsh/profiles/web/cordis.patch.yml` | 手工区（qq-bridge 区块之外）追加 `mcp-qq-memory`，stdio 指向 `src/mcp-server.mjs` |
-| `/root/qq-bridge/plugins/qq-agent-presets/qq-tool-restrict.mjs` | `SAFE_PREFIXES` 加 `'mcp__qq-memory__'` |
+| `/root/.dsh/profiles/web/cordis.patch.yml` | 手工区（qq-bridge 区块之外）追加 `mcp-qq-bridge-memory`，stdio 指向 `src/mcp-server.mjs` |
+| `/root/qq-bridge/plugins/qq-agent-presets/qq-tool-restrict.mjs` | `SAFE_PREFIXES` 加 `'mcp__qq-bridge-memory__'` |
 | `/root/qq-bridge/dsh/agent-presets/qq-chat-v2/agent.cordis.yml` | 第 18 条【记忆】（scope/caller/as_user 必填）+ 第 19 条【多群与隐私】 |
 
 守卫那条最容易漏：`qq-tool-restrict.mjs` 的 `ctx.tools.guard()` 是执行期白名单，没进名单的 MCP 工具一律被拒（报「不在 QQ 桥接白名单内」），光在 cordis 里挂上不生效。
@@ -102,12 +102,12 @@ node bin/qqmem.mjs collect               # 增量一次
 ## 回滚
 
 ```bash
-ssh qq 'python3 /root/qq-memory/apply.py --revert && systemctl restart dsh-web'
-ssh qq 'systemctl disable --now qq-memory-collect.timer'
-ssh qq 'rm -f /etc/systemd/system/qq-memory-collect.{service,timer} && systemctl daemon-reload'
+ssh qq 'python3 /root/qq-bridge-memory/apply.py --revert && systemctl restart dsh-web'
+ssh qq 'systemctl disable --now qq-bridge-memory-collect.timer'
+ssh qq 'rm -f /etc/systemd/system/qq-bridge-memory-collect.{service,timer} && systemctl daemon-reload'
 ```
 
-数据库留着不影响任何东西，想清就 `rm -rf /root/qq-memory`。
+数据库留着不影响任何东西，想清就 `rm -rf /root/qq-bridge-memory`。
 
 ## 已知局限
 

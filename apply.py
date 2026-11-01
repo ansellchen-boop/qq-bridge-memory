@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""qq-memory 的接线补丁：幂等、可检查、可回滚。
+"""qq-bridge-memory 的接线补丁：幂等、可检查、可回滚。
 
 为什么需要这个脚本：
-  qq-memory 是外挂（代码/数据都在 /root/qq-memory），但它必须往 qq-bridge 和 dsh 里
+  qq-bridge-memory 是外挂（代码/数据都在 /root/qq-bridge-memory），但它必须往 qq-bridge 和 dsh 里
   塞三处接线。qq-bridge 有自己的更新流程（merge / 重装依赖 / setup-dsh.mjs 会整体重写
   cordis.patch.yml 的 qq-bridge 区块），上游一动，这三处就可能被覆盖掉。
   这个脚本负责：跑一次就把三处补回去；--check 只看状态；--revert 只拆我们加的东西。
 
 三处：
-  1. /root/.dsh/profiles/web/cordis.patch.yml      挂 mcp-qq-memory 这个 MCP server
+  1. /root/.dsh/profiles/web/cordis.patch.yml      挂 mcp-qq-bridge-memory 这个 MCP server
   2. /root/qq-bridge/plugins/qq-agent-presets/qq-tool-restrict.mjs   SAFE_PREFIXES 放行
   3. /root/qq-bridge/dsh/agent-presets/qq-chat-v2/agent.cordis.yml   第 18 条【记忆】
 
@@ -35,23 +35,23 @@ BUILD = Path("/root/qq-bridge/scripts/build-agent-preset-patches.mjs")
 NODE = "/root/.nvm/versions/node/v24.21.0/bin/node"
 
 CORDIS_BLOCK = """- insert:
-    - id: mcp-qq-memory
+    - id: mcp-qq-bridge-memory
       name: '@deepseek-ai/dsh-mcp-client'
       config:
-        serverName: qq-memory
+        serverName: qq-bridge-memory
         transport: stdio
         command: '/root/.nvm/versions/node/v24.21.0/bin/node'
         args:
-          - '/root/qq-memory/src/mcp-server.mjs'
+          - '/root/qq-bridge-memory/src/mcp-server.mjs'
         toolCallTimeoutMs: 60000
 """
 
 GUARD_ANCHOR = "  'mcp__voice-tts__',\n"
 GUARD_LINES = (
-    "  // qq-memory：跨会话记忆外挂，代码与数据都在 /root/qq-memory，\n"
+    "  // qq-bridge-memory：跨会话记忆外挂，代码与数据都在 /root/qq-bridge-memory，\n"
     "  // 只读 messages.db（历史聊天原文），没有 shell / 文件写 / 派生 agent 能力。\n"
-    "  // 工具名见 /root/qq-memory/src/mcp-server.mjs；接线由 apply.py 维护。\n"
-    "  'mcp__qq-memory__',\n"
+    "  // 工具名见 /root/qq-bridge-memory/src/mcp-server.mjs；接线由 apply.py 维护。\n"
+    "  'mcp__qq-bridge-memory__',\n"
 )
 
 PRESET_HEAD = "      18. 【记忆】"
@@ -89,30 +89,30 @@ def backup(path: Path) -> Path:
 
 # ── 1. cordis.patch.yml ───────────────────────────────────────────
 def cordis_ok(text: str) -> bool:
-    return "id: mcp-qq-memory" in text
+    return "id: mcp-qq-bridge-memory" in text
 
 
 def cordis_apply(text: str) -> str:
     if cordis_ok(text):
         return text
     # rstrip 再固定加一个空行，否则反复 revert/apply 会累积空行
-    return text.rstrip("\n") + "\n\n# qq-memory：跨会话记忆外挂（apply.py 维护，别手改）。\n" + CORDIS_BLOCK
+    return text.rstrip("\n") + "\n\n# qq-bridge-memory：跨会话记忆外挂（apply.py 维护，别手改）。\n" + CORDIS_BLOCK
 
 
 def cordis_revert(text: str) -> str:
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
-        if "id: mcp-qq-memory" in line:
+        if "id: mcp-qq-bridge-memory" in line:
             start = i
             while start > 0 and not lines[start].lstrip().startswith("- insert:"):
                 start -= 1
             if not lines[start].lstrip().startswith("- insert:"):
-                raise PatchError("找不到 mcp-qq-memory 所属的 - insert: 块起点")
+                raise PatchError("找不到 mcp-qq-bridge-memory 所属的 - insert: 块起点")
             end = start + 1
             while end < len(lines) and not (lines[end].startswith("- ") or lines[end].startswith("-\n")):
                 end += 1
             # 顺手删掉块前那行注释和它上面的空行，保证 revert→apply 逐字节回到原样
-            if start > 0 and lines[start - 1].lstrip().startswith("# qq-memory"):
+            if start > 0 and lines[start - 1].lstrip().startswith("# qq-bridge-memory"):
                 start -= 1
                 if start > 0 and not lines[start - 1].strip():
                     start -= 1
@@ -122,7 +122,7 @@ def cordis_revert(text: str) -> str:
 
 # ── 2. qq-tool-restrict.mjs SAFE_PREFIXES ─────────────────────────
 def guard_ok(text: str) -> bool:
-    return "'mcp__qq-memory__'" in text
+    return "'mcp__qq-bridge-memory__'" in text
 
 
 def guard_apply(text: str) -> str:
@@ -136,7 +136,7 @@ def guard_apply(text: str) -> str:
 def guard_revert(text: str) -> str:
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
-        if "'mcp__qq-memory__'" in line:
+        if "'mcp__qq-bridge-memory__'" in line:
             start = i
             while start > 0 and lines[start - 1].lstrip().startswith("//"):
                 start -= 1
@@ -277,7 +277,7 @@ def main() -> int:
             bad += 1
 
     if args.check and bad:
-        print(f"\n{bad} 处需要修补 → 跑 python3 /root/qq-memory/apply.py")
+        print(f"\n{bad} 处需要修补 → 跑 python3 /root/qq-bridge-memory/apply.py")
         return 1
     return 0
 

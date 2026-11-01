@@ -6,7 +6,7 @@
 
 import fs from 'node:fs';
 
-const DEFAULT_PATH = '/root/qq-memory/config/relations.json';
+const DEFAULT_PATH = '/root/qq-bridge-memory/config/relations.json';
 
 function normalizeLink(x) {
   if (!x || typeof x !== 'object') return null;

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// qq-memory MCP server（stdio）：给她三个翻历史的工具。
+// qq-bridge-memory MCP server（stdio）：给她三个翻历史的工具。
 //
 // 为什么手写 JSON-RPC 而不是用 @modelcontextprotocol/sdk：
 //   这是 qq-bridge 的外挂，要求「不影响 qq-bridge 正常更新」。零依赖 =
-//   /root/qq-memory 不碰 /root/qq-bridge/node_modules，那边升级/重装依赖我们不受影响。
+//   /root/qq-bridge-memory 不碰 /root/qq-bridge/node_modules，那边升级/重装依赖我们不受影响。
 //   stdio 传输就是「每行一个 JSON-RPC 2.0 消息」，够用且不会因 sdk 大版本变动而废。
 //
 // 铁律：stdout 只能出 JSON-RPC，任何日志走 stderr。多打一行字就会让客户端解析失败。
@@ -15,8 +15,8 @@ import { loadRelations } from './relations.mjs';
 import { resolveAccess } from './access.mjs';
 import { redact } from './redact.mjs';
 
-const DB_PATH = process.env.QQ_MEMORY_DB || '/root/qq-memory/data/messages.db';
-const RELATIONS_PATH = process.env.QQ_MEMORY_RELATIONS || '/root/qq-memory/config/relations.json';
+const DB_PATH = process.env.QQ_MEMORY_DB || '/root/qq-bridge-memory/data/messages.db';
+const RELATIONS_PATH = process.env.QQ_MEMORY_RELATIONS || '/root/qq-bridge-memory/config/relations.json';
 const PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const FALLBACK_PROTOCOL = '2025-06-18';
 
@@ -61,7 +61,7 @@ function currentRelations() {
 reloadRelations();
 
 function log(...a) {
-  process.stderr.write(`[qq-memory] ${a.join(' ')}\n`);
+  process.stderr.write(`[qq-bridge-memory] ${a.join(' ')}\n`);
 }
 
 /** "2h" / "30m" / "3d" / "1w" / ISO / null → epoch ms。解析不了返回 null。 */
@@ -326,7 +326,7 @@ function handle(msg) {
         result: {
           protocolVersion: version,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: 'qq-memory', version: '0.1.0' },
+          serverInfo: { name: 'qq-bridge-memory', version: '0.1.0' },
           instructions:
             '这是 QQ 群聊/私聊的历史原话库。当前上下文里只有最近几十条消息，' +
             '更早的事情用 qq_search_history 或 qq_recent_history 去翻。' +

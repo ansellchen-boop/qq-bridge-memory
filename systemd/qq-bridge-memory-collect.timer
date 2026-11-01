@@ -1,6 +1,6 @@
 [Unit]
-Description=每分钟跑一次 qq-memory 采集器
-Documentation=file:///root/qq-memory/README.md
+Description=每分钟跑一次 qq-bridge-memory 采集器
+Documentation=file:///root/qq-bridge-memory/README.md
 
 [Timer]
 # 每分钟一次：social-v2.json 的 recentMessages 只有 60 条的滚动窗口。
@@ -12,7 +12,7 @@ OnUnitActiveSec=1min
 AccuracySec=10s
 # 关机期间错过的不用补跑（补也补不回来，窗口早滚过去了）
 Persistent=false
-Unit=qq-memory-collect.service
+Unit=qq-bridge-memory-collect.service
 
 [Install]
 WantedBy=timers.target

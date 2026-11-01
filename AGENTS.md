@@ -1,4 +1,4 @@
-# AGENTS.md —— qq-memory
+# AGENTS.md —— qq-bridge-memory
 
 给在这台机器上干活的 agent 看。**先读本文件，再动手。**
 
@@ -10,7 +10,7 @@
 
 1. **外挂，绝不改 `/root/qq-bridge`** —— 一行都不改。qq-bridge 会独立更新（`scripts/setup-dsh.mjs` 会重写 cordis.patch.yml 的 MCP 区块），本项目只能待在区块外的「手工区」，并只**只读**它的数据文件。
    - 允许读：`/root/qq-bridge/state/social-v2.json`、`/root/.dsh/sessions/**`
-   - 允许写：只写 `/root/qq-memory/**`
+   - 允许写：只写 `/root/qq-bridge-memory/**`
 2. **只读上游数据要防竞态** —— `social-v2.json` 由 bridge 持续改写，读它可能拿到半截 JSON：解析失败当「这轮没数据」，不重试到死、不覆盖游标。
 3. **中文检索必须用 bigram** —— SQLite FTS5 的 `unicode61` 把整句当一个 token，`trigram` 对两字词 0 命中（实测）。本项目自切 bigram 存 `tokens` 列，查询同样切。单字查询降级 LIKE。
 4. **改完必须真跑一次** —— 「代码看着对」不算。`node bin/qqmem.mjs search 显卡` 出结果才算。
@@ -21,13 +21,13 @@
 
 ```bash
 # 远端（所有实际运行都在远端）
-ssh qq 'cd /root/qq-memory && node bin/qqmem.mjs stats'
-ssh qq 'cd /root/qq-memory && node bin/qqmem.mjs backfill'      # 从 dsh 归档回填
-ssh qq 'cd /root/qq-memory && node bin/qqmem.mjs collect'       # 从 social-v2.json 增量
-ssh qq 'cd /root/qq-memory && node bin/qqmem.mjs search 显卡 --days 7'
+ssh qq 'cd /root/qq-bridge-memory && node bin/qqmem.mjs stats'
+ssh qq 'cd /root/qq-bridge-memory && node bin/qqmem.mjs backfill'      # 从 dsh 归档回填
+ssh qq 'cd /root/qq-bridge-memory && node bin/qqmem.mjs collect'       # 从 social-v2.json 增量
+ssh qq 'cd /root/qq-bridge-memory && node bin/qqmem.mjs search 显卡 --days 7'
 
 # 测试
-ssh qq 'cd /root/qq-memory && node --test tests/'
+ssh qq 'cd /root/qq-bridge-memory && node --test tests/'
 ```
 
 Node 用 `/root/.nvm/versions/node/v24.21.0/bin/node`（`node:sqlite` 需要 ≥22）。
@@ -42,7 +42,7 @@ Node 用 `/root/.nvm/versions/node/v24.21.0/bin/node`（`node:sqlite` 需要 ≥
 | `src/collect.mjs` | 轮询 `social-v2.json` 的 `recentMessages` 增量入库 |
 | `src/mcp-server.mjs` | MCP stdio server，暴露 `qq_search_history` / `qq_recent_history` |
 | `bin/qqmem.mjs` | CLI 入口 |
-| `data/qq-memory.sqlite` | 主库（含 FTS5 虚表） |
+| `data/qq-bridge-memory.sqlite` | 主库（含 FTS5 虚表） |
 
 ## 数据来源（实测过的形状）
 

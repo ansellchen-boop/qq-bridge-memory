@@ -65,3 +65,11 @@
 - **`qq_history_stats` 同样必填 `caller`，且只报本会话明细 + 全库总数**。无参数的 stats 会把「有几个会话、各自多少条、时间跨度多长」全都交出去，边界做得再细也白搭。
 - **白名单按文件 mtime 热更新**，改完 `relations.json` 不用重启 dsh-web。重启会掐断正在进行的会话，为了加一个群付这个代价不值得。
 - `recent` 的标题报 `countMatches` 算出的真实总数，不是 `limit` 截断后的条数；`search` 的空 query 走 isError，不返回整库。
+
+## 2026-11-01 B 批改名：五处同窗口切，环境变量与 config 不动
+
+**原因**：旧名 `qq-memory` 和仓库名 `qq-bridge-memory` 不一致，翻历史时容易把「线上 `/root/qq-memory`」和「本机这个仓库」当成两套东西。而五处（运行目录、systemd 单元、cordis 的 `id`/`serverName`、守卫前缀 `mcp__qq-memory__`、`apply.py` 的判据串）互相指向，只改一半就会出现「接线指着不存在的路径」或「工具看得见但被守卫拒掉」，所以必须一个窗口内改完并重启 `dsh-web` 才生效。
+
+**否决**：① 分两次改（先目录、后接线）——中间态里 `dsh-web` 一重启就失联；② 连环境变量 `QQ_MEMORY_DB` / `QQ_MEMORY_RELATIONS` 一起改名——它们不在那五处里，改了没有收益，只多一处要跟着维护的东西；③ 用 rsync 覆盖整个运行目录——`config/relations.json` 存的是线上真实白名单（真实 owner 号不写进公开仓），本地那份是模板（`123456789`），覆盖即丢授权；④ 留着旧接线让 `apply.py` 自己覆盖——旧 `id: mcp-qq-memory` 不被新判据识别，apply 会再插一块，留下两条指向不同目录的 MCP 条目。
+
+**约束**：切换前后 `apply.py --check` 都必须 exit 0；rsync 永久带 `--exclude config --exclude data`；切换脚本 `scripts/cutover-batch-b.sh` 必须默认 dry-run，且第 0 步就要做「代码版本预检」（防「忘了 rsync 就 mv → MCP 指向已搬走的库」这种假成功），预检必须排在停 timer 之前，失败不留任何副作用；preset 第 18/19 条文案里没有 server 前缀，本次不动文案，只保证 `build-agent-preset-patches.mjs --check` 同步。
