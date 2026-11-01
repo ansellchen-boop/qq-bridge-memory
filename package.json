@@ -1,0 +1,14 @@
+{
+  "name": "qq-bridge-memory",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "qq-bridge 的跨会话记忆外挂：把群聊/私聊原话存进 SQLite FTS5，给她一个能翻历史的检索工具",
+  "bin": { "qqmem": "./bin/qqmem.mjs" },
+  "scripts": {
+    "test": "node --test 'tests/*.test.mjs'",
+    "search": "node bin/qqmem.mjs search",
+    "stats": "node bin/qqmem.mjs stats"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": {}
+}

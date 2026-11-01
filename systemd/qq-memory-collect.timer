@@ -1,0 +1,18 @@
+[Unit]
+Description=每分钟跑一次 qq-memory 采集器
+Documentation=file:///root/qq-memory/README.md
+
+[Timer]
+# 每分钟一次：social-v2.json 的 recentMessages 只有 60 条的滚动窗口。
+# 原来设 5 分钟，但实测群里存在「5 分钟 63 条」的时段，已经超过窗口，
+# 那种时候再密的轮询也接不住 —— 所以真正的兜底是 gaps 台账（src/collect.mjs 写库），
+# 60 秒只是把常规时段的窗口余量从 ~1 小时压到 ~1 分钟。
+OnBootSec=1min
+OnUnitActiveSec=1min
+AccuracySec=10s
+# 关机期间错过的不用补跑（补也补不回来，窗口早滚过去了）
+Persistent=false
+Unit=qq-memory-collect.service
+
+[Install]
+WantedBy=timers.target
